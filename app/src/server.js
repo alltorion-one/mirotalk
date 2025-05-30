@@ -378,10 +378,11 @@ const views = {
 const filesPath = [views.landing, views.newCall, views.client, views.login];
 const htmlInjector = new HtmlInjector(filesPath, config?.brand || null);
 
-const channels = {}; // collect channels
+const channels = {}; // store all channels aka rooms
 const sockets = {}; // collect sockets
-const peers = {}; // collect peers info grp by channels
-const presenters = {}; // collect presenters grp by channels
+const peers = {}; // store all peers aka users
+const presenters = {}; // store all presenters aka hosts
+const roomConfig = {}; // store room configuration including language settings
 
 app.set('trust proxy', trustProxy); // Enables trust for proxy headers (e.g., X-Forwarded-For) based on the trustProxy setting
 app.use(helmet.noSniff()); // Enable content type sniffing prevention
@@ -1226,6 +1227,8 @@ io.sockets.on('connect', async (socket) => {
             peer_rec_status,
             peer_privacy_status,
             peer_info,
+            native_language,
+            target_language
         } = config;
 
         if (!Validate.isValidRoomName(channel)) {
@@ -1244,6 +1247,14 @@ io.sockets.on('connect', async (socket) => {
 
         // no presenter aka host in presenters init
         if (!(channel in presenters)) presenters[channel] = {};
+
+        // Initialize room configuration if not exists
+        if (!(channel in roomConfig)) {
+            roomConfig[channel] = {
+                native_language: native_language || 'en',
+                target_language: target_language || 'en'
+            };
+        }
 
         let is_presenter = true;
 
@@ -1334,6 +1345,8 @@ io.sockets.on('connect', async (socket) => {
             peer_privacy_status: peer_privacy_status,
             os: osName ? `${osName} ${osVersion}` : '',
             browser: browserName ? `${browserName} ${browserVersion}` : '',
+            native_language: native_language || 'en',
+            target_language: target_language || 'en'
         };
 
         const activeRooms = getActiveRooms();
@@ -1365,7 +1378,7 @@ io.sockets.on('connect', async (socket) => {
                 active: redirectEnabled,
                 url: redirectURL,
             },
-            //...
+            room_config: roomConfig[channel]
         });
 
         // SCENARIO: Notify when the first user join room and is awaiting assistance...
@@ -1849,6 +1862,56 @@ io.sockets.on('connect', async (socket) => {
             //console.log('Send to peer', { msg: msg, config: config });
         }
     }
+
+    // Handle speech transcript messages from data channel
+    socket.on('dataChannel', async (config) => {
+        if (config.type === 'speech') {
+            const { room_id, peer_name, peer_avatar, text_data, time_stamp } = config;
+            
+            // Get room configuration
+            const roomConfig = roomConfigs[room_id];
+            if (!roomConfig) {
+                console.warn(`No room configuration found for room ${room_id}`);
+                return;
+            }
+
+            // Get the speaker's native language and target language
+            const speakerPeer = peers[room_id]?.[socket.id];
+            if (!speakerPeer) {
+                console.warn(`No peer info found for speaker ${socket.id} in room ${room_id}`);
+                return;
+            }
+
+            const { native_language, target_language } = speakerPeer;
+
+            // Translate the text if target language is different from native language
+            let translatedText = null;
+            if (target_language && target_language !== native_language) {
+                translatedText = await translateText(text_data, target_language, native_language);
+            }
+
+            // Broadcast the original and translated text to all peers in the room
+            const message = {
+                type: 'translated_speech',
+                room_id,
+                peer_name,
+                peer_avatar,
+                text_data,
+                translated_text: translatedText,
+                time_stamp,
+                native_language,
+                target_language
+            };
+
+            // Send to all peers in the room
+            for (const peerId in peers[room_id]) {
+                const peerSocket = sockets[peerId];
+                if (peerSocket) {
+                    peerSocket.emit('translated_message', message);
+                }
+            }
+        }
+    });
 }); // end [sockets.on-connect]
 
 /**

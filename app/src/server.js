@@ -88,18 +88,26 @@ const serverUrl = `http://${HOST}:${PORT}`;
 
 const authHost = new Host(); // Authenticated IP by Login
 
-// Define paths to the SSL key and certificate files
-const keyPath = path.join(__dirname, '../ssl/key.pem');
-const certPath = path.join(__dirname, '../ssl/cert.pem');
-
-// Read SSL key and certificate files securely
-const options = {
-    key: fs.readFileSync(keyPath, 'utf-8'),
-    cert: fs.readFileSync(certPath, 'utf-8'),
-};
-
-// Server both http and https
-const server = httpolyglot.createServer(options, app);
+// Server configuration
+let server;
+if (process.env.NODE_ENV === 'production') {
+    // In production (Railway), use regular HTTP server
+    server = require('http').createServer(app);
+} else {
+    // In development, use SSL if available
+    try {
+        const keyPath = path.join(__dirname, '../ssl/key.pem');
+        const certPath = path.join(__dirname, '../ssl/cert.pem');
+        const options = {
+            key: fs.readFileSync(keyPath, 'utf-8'),
+            cert: fs.readFileSync(certPath, 'utf-8'),
+        };
+        server = httpolyglot.createServer(options, app);
+    } catch (error) {
+        log.warn('SSL certificates not found, falling back to HTTP server');
+        server = require('http').createServer(app);
+    }
+}
 
 // Trust Proxy
 const trustProxy = !!getEnvBoolean(process.env.TRUST_PROXY);

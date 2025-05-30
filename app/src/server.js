@@ -975,6 +975,11 @@ app.use((req, res) => {
     res.sendFile(views.notFound);
 });
 
+// Redirect root path to newcall
+app.get("/", (req, res) => {
+    res.redirect("/newcall");
+});
+
 /**
  * Get Server config
  * @param {string} tunnel

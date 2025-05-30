@@ -209,7 +209,7 @@ if (turnServerEnabled && turnServerUrl && turnServerUsername && turnServerCreden
 
 // Test Stun and Turn connection with query params
 // const testStunTurn = host + '/icetest?iceServers=' + JSON.stringify(iceServers);
-const testStunTurn = host + '/icetest';
+const testStunTurn = serverUrl + '/icetest';
 
 // IP Lookup
 const IPLookupEnabled = getEnvBoolean(process.env.IP_LOOKUP_ENABLED);
@@ -1883,8 +1883,8 @@ io.sockets.on('connect', async (socket) => {
             const { room_id, peer_name, peer_avatar, text_data, time_stamp } = config;
             
             // Get room configuration
-            const roomConfig = roomConfigs[room_id];
-            if (!roomConfig) {
+            const roomCfg = roomConfig[room_id];
+            if (!roomCfg) {
                 console.warn(`No room configuration found for room ${room_id}`);
                 return;
             }

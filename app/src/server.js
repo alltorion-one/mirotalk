@@ -2241,3 +2241,21 @@ process.on('SIGTERM', () => {
     htmlInjector.cleanup();
     process.exit();
 });
+
+// Startup environment variable checks
+const requiredEnv = [
+    'JWT_KEY',
+    'API_KEY_SECRET',
+    'DEEPL_API_KEY',
+];
+const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+if (missingEnv.length > 0) {
+    console.error('Missing required environment variables:', missingEnv.join(', '));
+    process.exit(1);
+}
+
+// Global unhandled promise rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});

@@ -82,8 +82,8 @@ const nodemailer = require('./lib/nodemailer');
 
 const packageJson = require('../../package.json');
 
-const port = process.env.PORT || 3000; // must be the same to client.js signalingServerPort
-const host = process.env.HOST || `http://localhost:${port}`;
+const PORT = process.env.PORT || 3000;
+const host = process.env.HOST || `http://localhost:${PORT}`;
 
 const authHost = new Host(); // Authenticated IP by Login
 
@@ -1040,7 +1040,7 @@ function getServerConfig(tunnel = false) {
 async function ngrokStart() {
     try {
         await ngrok.authtoken(ngrokAuthToken);
-        const listener = await ngrok.forward({ addr: port });
+        const listener = await ngrok.forward({ addr: PORT });
         const tunnelUrl = listener.url();
         log.info('Server config', getServerConfig(tunnelUrl));
     } catch (err) {
@@ -1053,7 +1053,7 @@ async function ngrokStart() {
 /**
  * Start Local Server with ngrok https tunnel (optional)
  */
-server.listen(port, null, () => {
+server.listen(PORT, null, () => {
     log.debug(
         `%c
 

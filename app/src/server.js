@@ -83,7 +83,8 @@ const nodemailer = require('./lib/nodemailer');
 const packageJson = require('../../package.json');
 
 const PORT = process.env.PORT || 3000;
-const host = process.env.HOST || `http://localhost:${PORT}`;
+const HOST = process.env.HOST || "0.0.0.0";
+const serverUrl = `http://${HOST}:${PORT}`;
 
 const authHost = new Host(); // Authenticated IP by Login
 
@@ -172,7 +173,7 @@ const swaggerDocument = yaml.load(fs.readFileSync(path.join(__dirname, '/../api/
 // Api config
 const { v4: uuidV4 } = require('uuid');
 const apiBasePath = '/api/v1'; // api endpoint path
-const api_docs = host + apiBasePath + '/docs'; // api docs
+const api_docs = serverUrl + apiBasePath + '/docs'; // api docs
 const api_key_secret = process.env.API_KEY_SECRET || 'mirotalkp2p_default_secret';
 const apiDisabledString = process.env.API_DISABLED || '["token", "meetings"]';
 const api_disabled = JSON.parse(apiDisabledString);
@@ -988,7 +989,7 @@ app.get("/", (req, res) => {
 function getServerConfig(tunnel = false) {
     return {
         // General Server Information
-        server: host,
+        server: serverUrl,
         server_tunnel: tunnel,
         trust_proxy: trustProxy,
         api_docs: api_docs,
